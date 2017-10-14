@@ -11,14 +11,27 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 
+import com.groupdocs.annotation.common.exception.AnnotatorException;
 import com.groupdocs.annotation.domain.AnnotationInfo;
 import com.groupdocs.annotation.domain.AnnotationReplyInfo;
+import com.groupdocs.annotation.domain.AnnotationReviewerRights;
 import com.groupdocs.annotation.domain.AnnotationType;
 import com.groupdocs.annotation.domain.DocumentType;
+import com.groupdocs.annotation.domain.PageData;
 import com.groupdocs.annotation.domain.Point;
 import com.groupdocs.annotation.domain.Rectangle;
+import com.groupdocs.annotation.domain.ReviewerInfo;
+import com.groupdocs.annotation.domain.RowData;
 import com.groupdocs.annotation.domain.config.AnnotationConfig;
+import com.groupdocs.annotation.domain.containers.DocumentInfoContainer;
+import com.groupdocs.annotation.domain.results.CreateAnnotationResult;
+import com.groupdocs.annotation.domain.results.GetCollaboratorsResult;
+import com.groupdocs.annotation.domain.results.SetCollaboratorsResult;
 import com.groupdocs.annotation.handler.AnnotationImageHandler;
+import com.groupdocs.annotation.handler.input.IDocumentDataHandler;
+import com.groupdocs.annotation.handler.input.IUserDataHandler;
+import com.groupdocs.annotation.handler.input.dataobjects.Document;
+import com.groupdocs.annotation.handler.input.dataobjects.User;
 
 public class PDFAnnotation {
 	
@@ -492,4 +505,123 @@ public class PDFAnnotation {
 		//ExEnd:addDistanceAnnotationInPDF
 	}
 	
+	public static void usersWithDifferentRights(){
+		//ExStart:usersWithDifferentRights
+		AnnotationConfig cfg = Utilities.getConfiguration();
+		AnnotationImageHandler annotator = new AnnotationImageHandler(cfg);
+		IUserDataHandler userRepository = annotator.getUserDataHandler();
+		IDocumentDataHandler documentRepository = annotator.getDocumentDataHandler();
+		 
+		// Create storage folder
+		if(!new File(cfg.getStoragePath()).exists() && !new File(cfg.getStoragePath()).mkdirs())
+		{
+		    System.out.println("Can't create directory!");
+		}
+		 
+		// Create owner.
+		User johnOwner = userRepository.getUserByEmail("john@doe.com");
+		 
+		if(johnOwner == null)
+		{
+		    final User user = new User();
+		    user.setFirstName("John");
+		    user.setLastName("Doe");
+		    user.setEmail("john@doe.com");
+		    userRepository.add(user);
+		    johnOwner = userRepository.getUserByEmail("john@doe.com");
+		}
+		 
+		// Create document data object in storage
+		Document document = documentRepository.getDocument(fileName);
+		long documentId = document == null ? annotator.createDocument(fileName, DocumentType.Pdf, johnOwner.getId()) : document.getId();
+		 
+		// Create reviewer.
+		ReviewerInfo reviewerInfo = new ReviewerInfo();
+		reviewerInfo.setPrimaryEmail("judy@doe.com");
+		reviewerInfo.setFirstName("Judy");
+		reviewerInfo.setLastName("Doe");
+		reviewerInfo.setAccessRights(AnnotationReviewerRights.CanView);
+		 
+		// Add collaboorator to the document. If user with UserName equals to reviewers PrimaryEmail is absent it will be created.
+		SetCollaboratorsResult addCollaboratorResult = annotator.addCollaborator(documentId, reviewerInfo);
+		System.out.println(addCollaboratorResult);
+		 
+		// Get document collaborators
+		GetCollaboratorsResult getCollaboratorsResult = annotator.getCollaborators(documentId);
+		System.out.println(getCollaboratorsResult);
+		User judy = userRepository.getUserByEmail("judy@doe.com");
+		 
+		// Create annotation object
+		AnnotationInfo pointAnnotation = new AnnotationInfo();
+		pointAnnotation.setAnnotationPosition(new Point(852.0, 81.0));
+		pointAnnotation.setBox(new Rectangle(212f, 81f, 142f, 0.0f));
+		pointAnnotation.setType(AnnotationType.Point);
+		pointAnnotation.setPageNumber(0);
+		pointAnnotation.setCreatorName("Anonym A.");
+		 
+		// John try to add annotations
+		CreateAnnotationResult johnResult = annotator.createAnnotation(pointAnnotation, documentId, johnOwner.getId());
+		System.out.println(johnResult);
+		 
+		// Judy try to add annotations
+		try {
+		    CreateAnnotationResult judyResult = annotator.createAnnotation(pointAnnotation, documentId, judy.getId());
+		    System.out.println(judyResult);
+		} catch (AnnotatorException e) {
+		    System.out.println(e.getMessage());
+		}
+		 
+		// Allow Judy create annotations.
+		reviewerInfo.setAccessRights(AnnotationReviewerRights.CanAnnotate);
+		SetCollaboratorsResult updateCollaboratorResult = annotator.updateCollaborator(documentId, reviewerInfo);
+		System.out.println(updateCollaboratorResult);
+		 
+		// Judy try to add annotations
+		CreateAnnotationResult judyResultCanAnnotate = annotator.createAnnotation(pointAnnotation, documentId, judy.getId());
+		System.out.println(judyResultCanAnnotate);
+		//ExEnd:usersWithDifferentRights
+	}
+	public static void gettingTextCoordinates(String fileName){
+		//ExStart:gettingTextCoordinates
+		AnnotationConfig cfg = Utilities.getConfiguration();
+		AnnotationImageHandler annotator = new AnnotationImageHandler(cfg);
+		annotator.createDocument(fileName);
+		DocumentInfoContainer documentInfoContainer = annotator.getDocumentInfo(fileName);
+		 
+		// Go through all pages
+		for (PageData pageData : documentInfoContainer.getPages())
+		{
+		    System.out.println("Page number: " + pageData.getNumber());
+		 
+		    //Go through all page rows
+		    for(int i = 0; i < pageData.getRows().size(); i++)
+		    {
+		        RowData rowData = pageData.getRows().get(i);
+		 
+		        // Write data to console
+		        System.out.println("Row: " + (i + 1));
+		        System.out.println("Text: " + rowData.getText());
+		        System.out.println("Text width: " + rowData.getLineWidth());
+		        System.out.println("Text height: " + rowData.getLineHeight());
+		        System.out.println("Distance from left: " + rowData.getLineLeft());
+		        System.out.println("Distance from top: " + rowData.getLineTop());
+		 
+		        // Get words
+		        String[] words = rowData.getText().split(" ");
+		 
+		        // Go through all word coordinates
+		        for(int j = 0; j < words.length; j++)
+		        {
+		            int coordinateIndex = j == 0 ? 0 : j + 1;
+		            // Write data to console
+		            System.out.println();
+		            System.out.println("Word:'" + words[j] + "'");
+		            System.out.println("Word distance from left: " + rowData.getTextCoordinates().get(coordinateIndex));
+		            System.out.println("Word width: " + rowData.getTextCoordinates().get(coordinateIndex + 1));
+		            System.out.println();
+		        }
+		    }
+		}
+		//ExEnd:gettingTextCoordinates
+	}
 }
