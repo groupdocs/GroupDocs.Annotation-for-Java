@@ -21,12 +21,13 @@ import com.groupdocs.annotation.domain.image.PageImage;
 import com.groupdocs.annotation.domain.options.ImageOptions;
 import com.groupdocs.annotation.handler.AnnotationImageHandler;
 import com.groupdocs.annotation.handler.input.IDocumentDataHandler;
+import com.groupdocs.signature.examples.Metered;
 
 public class Utilities {
 	// ExStart:commonutilities
 	public final static String storagePath = "./Data/SourceFiles/";
 	public final static String outputPath = "./Data/OutputFiles/";
-	public static final String licensePath = "D://GroupDocs.Total.Java.lic";
+	public static final String licensePath = "E://GroupDocs.Total.Java.lic";
 	// ExEnd::commonutilities
 	// Applies License
 	public static void applyLicenseFromFile() {
@@ -41,7 +42,14 @@ public class Utilities {
 		}
 		//ExEnd:applyLicenseFromFile
 	}
-
+	public static void setMeteredLicense(){
+		//ExStart:setMeteredLicense
+		String PublicKey = ""; // Your public license key
+		String PrivateKey = ""; // Your private license key
+		com.groupdocs.annotation.common.license.Metered metered = new com.groupdocs.annotation.common.license.Metered();
+		metered.setMeteredKey(PublicKey, PrivateKey);
+		//ExEnd:setMeteredLicense
+	}
 	// Returns AnnotationConfig configurations
 	public static AnnotationConfig getConfiguration() {
 		//ExStart:getConfiguration
